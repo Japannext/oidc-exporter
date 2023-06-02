@@ -1,0 +1,4 @@
+.ca-bundle
+.helmfile.yaml
+.env.local
+*.swp

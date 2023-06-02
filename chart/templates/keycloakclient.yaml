@@ -1,0 +1,27 @@
+{{- if .Values.keycloak.enabled }}
+---
+apiVersion: keycloak.japannext.co.jp/v1alpha2
+kind: KeycloakClient
+metadata:
+  name: "{{ .Values.keycloak.clientName | default .Release.Name }}"
+  namespace: "{{ .Release.Namespace }}"
+spec:
+  endpoint:
+    kind: "{{ .Values.keycloak.endpointKind }}"
+    name: "{{ .Values.keycloak.endpointName }}"
+  realm: "{{ .Values.keycloak.realm }}"
+  secret:
+    enabled: true
+    name: "{{ .Release.Name }}-client-secret"
+  config:
+    name: "{{ .Values.keycloak.clientName | default .Release.Name }}"
+    description: "OIDC exporter test client (for monitoring purpose)"
+    protocol: openid-connect
+    directAccessGrantsEnabled: true
+    defaultClientScopes:
+    - acr
+    - email
+    - profile
+    - roles
+    - web-origins
+{{- end }}

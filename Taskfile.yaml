@@ -1,0 +1,47 @@
+---
+version: '3'
+
+vars:
+  NAME: oidc-exporter
+  REGISTRY: ghcr.io/japannext
+  VERSION: 1.0.0
+
+includes:
+  chart:
+    taskfile: ./chart/Taskfile.yaml
+    dir: ./chart
+
+dotenv: ['.env.local']
+
+env:
+  BUILDAH_FORMAT: docker
+
+tasks:
+  lint:
+    desc: Lint the Dockerfile
+    cmds:
+    - hadolint Dockerfile
+
+  develop:
+    desc: Deploy a temporary dev Docker image
+    cmds:
+    - docker build . -t $LOCAL_REGISTRY/{{ .NAME }}:develop
+    - docker push $LOCAL_REGISTRY/{{ .NAME }}:develop
+    preconditions:
+    - sh: '[[ -n "{{ .LOCAL_REGISTRY }}" ]]'
+      msg: |
+        You need to specify LOCAL_REGISTRY=nexus.example.com:8080/myregistry
+        in .env.local to use this task
+    - sh: docker login "${LOCAL_REGISTRY}" --get-login
+      msg: "You need to login to docker with `docker login ${LOCAL_REGISTRY}`"
+
+  release:
+    desc: Release the Docker image
+    cmds:
+    - docker build . -t {{ .REGISTRY }}/{{ .NAME }}:{{ .VERSION }}
+    - docker push {{ .REGISTRY }}/{{ .NAME }}:{{ .VERSION }}
+    preconditions:
+    - sh: docker login {{ .REGISTRY }} --get-login
+      msg: "You need to login to docker with `docker login {{ .REGISTRY }}`"
+    status:  # Protect against accidental re-release
+    - docker manifest inspect {{ .REGISTRY }}/{{ .NAME }}:{{ .VERSION }}

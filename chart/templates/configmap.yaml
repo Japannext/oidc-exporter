@@ -1,0 +1,20 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ .Release.Name }}-config"
+  namespace: "{{ .Release.Namespace }}"
+data:
+  oidc-exporter.yaml: |
+    # OIDC exporter configuration
+    ---
+    modules:
+    {{- range $k, $v := .Values.modules }}
+      {{ $k }}:
+        url: "{{ $v.url }}"
+        client_id: "{{ $v.clientId | default $k }}"
+        username: "{{ $v.username | default $k }}"
+    {{- end }}
+    {{- if .Values.cacertConfigMap }}
+    cacert: /cacert/ca.crt
+    {{- end }}

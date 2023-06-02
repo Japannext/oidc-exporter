@@ -1,0 +1,22 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ .Release.Name }}"
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app.kubernetes.io/name: oidc-exporter
+    app.kubernetes.io/instance: "{{ .Release.Name }}"
+    {{- with .Values.partOf }}
+    app.kubernetes.io/part-of: "{{ . }}"
+    {{- end }}
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9123
+    protocol: TCP
+    targetPort: metrics
+  selector:
+    app.kubernetes.io/name: oidc-exporter
+    app.kubernetes.io/instance: "{{ .Release.Name }}"
+  sessionAffinity: None

@@ -1,0 +1,25 @@
+---
+version: '3'
+
+vars:
+  OCI_REPO: ghcr.io/japannext/helm-charts
+  CHART_NAME:
+    sh: "grep -oP '^name: \\K.*' Chart.yaml"
+  CHART_VERSION:
+    sh: "grep -oP '^version: \\K.*' Chart.yaml"
+
+tasks:
+  lint:
+    desc: Lint the helm chart
+    cmds:
+    - helm lint
+
+  release:
+    desc: Release the finished helm chart, versionned
+    cmds:
+    - mkdir -p .charts
+    - helm package . --version {{ .CHART_VERSION }} -d .charts/
+    - helm push .charts/{{ .CHART_NAME }}-{{ .CHART_VERSION }}.tgz oci://{{ .OCI_REPO }}
+    preconditions:
+    - sh: grep -F '{{ .OCI_REPO }}' ~/.config/helm/registry/config.json
+      msg: "You need to run `helm registry login {{ .OCI_REPO }}`"

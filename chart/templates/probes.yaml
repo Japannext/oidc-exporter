@@ -1,0 +1,23 @@
+{{- range $k, $v := .Values.modules }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: "{{ $.Release.Name }}-{{ $k }}"
+  namespace: "{{ $.Release.Namespace }}"
+  labels:
+    {{- if $.Values.probe.additionalLabels }}
+    {{- $.Values.probe.additionalLabels | toYaml | nindent 4 }}
+    {{- end }}
+spec:
+  jobName: "{{ $.Release.Name }}-{{ $k }}"
+  interval: 10s
+  module: "{{ $k }}"
+  prober:
+    url: "{{ $.Release.Name }}.{{ $.Release.Namespace }}.svc.cluster.local:9123"
+    path: /metrics
+  targets:
+    staticConfig:
+      static:
+      - "{{ $v.url }}"
+{{- end }}

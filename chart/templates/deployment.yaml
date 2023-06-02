@@ -1,0 +1,100 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ .Release.Name }}"
+  namespace: "{{ .Release.Namespace }}"
+  labels:
+    app.kubernetes.io/name: oidc-exporter
+    app.kubernetes.io/instance: "{{ .Release.Name }}"
+    {{- with .Values.partOf }}
+    app.kubernetes.io/part-of: "{{ . }}"
+    {{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: oidc-exporter
+      app.kubernetes.io/instance: "{{ .Release.Name }}"
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: oidc-exporter
+        app.kubernetes.io/instance: "{{ .Release.Name }}"
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      containers:
+      - name: oidc-exporter
+        image: "{{ .Values.image.repo }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+        ports:
+        - containerPort: 9123
+          name: metrics
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /readyz
+            port: 9123
+            scheme: HTTP
+          initialDelaySeconds: 1
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 2
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 9123
+            scheme: HTTP
+          initialDelaySeconds: 1
+          periodSeconds: 3
+          successThreshold: 1
+          timeoutSeconds: 1
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities: {drop: ['ALL']}
+          runAsNonRoot: true
+          seccompProfile: {type: RuntimeDefault}
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        env:
+        - name: OIDC_EXPORTER_CONFIG_FILE
+          value: /config/oidc-exporter.yaml
+        {{- range $k, $v := .Values.modules }}
+        - name: "OIDC_EXPORTER_{{ $k }}_CLIENT_SECRET"
+          valueFrom:
+            secretKeyRef:
+              {{- if $v.clientSecret }}
+              name: "{{ $v.clientSecret.SecretName }}"
+              key: "{{ $v.clientSecret.SecretKey | default "client_secret" }}"
+              {{- else }}
+              name: "{{ $.Release.Name }}-client-secret"
+              key: client_secret
+              {{- end }}
+        - name: "OIDC_EXPORTER_{{ $k }}_PASSWORD"
+          valueFrom:
+            secretKeyRef:
+              name: "{{ $v.passwordSecretName }}"
+              key: "{{ $v.passwordSecretKey }}"
+        {{- end }}
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        {{- if .Values.cacertConfigMap }}
+        - name: cacert
+          mountPath: /cacert
+        {{- end }}
+      volumes:
+      - name: config
+        configMap:
+          name: "{{ .Release.Name }}-config"
+      {{- if .Values.cacertConfigMap }}
+      - name: cacert
+        configMap:
+          name: "{{ .Values.cacertConfigMap }}"
+      {{- end }}
