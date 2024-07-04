@@ -23,7 +23,7 @@ For all installation methods, you need to create a static user/service account i
 ### On Kubernetes
 
 ```bash
-helm install oidc-exporter oci://ghcr.io/japannext/helm-charts --version 1.0.0 --values values.yaml
+helm install oidc-exporter oci://ghcr.io/japannext/helm-charts/oidc-exporter --version 1.0.0 --values values.yaml
 ```
 
 `values.yaml` example:
